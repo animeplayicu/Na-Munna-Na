@@ -7,17 +7,18 @@ interface MangaBannerProps {
   coverUrl: string | null
   posterUrl?: string | null
   title: string
+  showTitle?: boolean
 }
 
-export default function MangaBanner({ coverUrl, posterUrl, title }: MangaBannerProps) {
+export default function MangaBanner({ coverUrl, posterUrl, title, showTitle = true }: MangaBannerProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
   
-  // Use poster as fallback if cover is not available
+  // Use cover as primary, poster as fallback
   const displayImage = coverUrl || posterUrl
 
   return (
-    <div className="relative w-full h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden">
+    <div className="relative w-full h-[50vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
         {displayImage && !imageError ? (
@@ -52,18 +53,20 @@ export default function MangaBanner({ coverUrl, posterUrl, title }: MangaBannerP
       </div>
       
       {/* Content */}
-      <div className="absolute inset-0 flex items-end">
-        <div className="container mx-auto px-4 pb-8">
-          <div className="max-w-4xl">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-4 leading-tight">
-              <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent drop-shadow-2xl">
-                {title}
-              </span>
-            </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-red-500 to-orange-500 rounded-full" />
+      {showTitle && (
+        <div className="absolute inset-0 flex items-end">
+          <div className="container mx-auto px-4 pb-8">
+            <div className="max-w-4xl">
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
+                <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent drop-shadow-2xl">
+                  {title}
+                </span>
+              </h1>
+              <div className="w-24 h-1 bg-gradient-to-r from-red-500 to-orange-500 rounded-full" />
+            </div>
           </div>
         </div>
-      </div>
+      )}
       
       {/* Decorative Elements */}
       <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-orange-500 to-red-500" />

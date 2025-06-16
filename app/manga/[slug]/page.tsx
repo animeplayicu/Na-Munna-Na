@@ -231,7 +231,7 @@ export default function MangaDetailPage() {
   const posterUrl = kitsuManga ? getKitsuPosterImage(kitsuManga.attributes.posterImage) : "/placeholder.svg"
   const coverUrl = kitsuManga
     ? getKitsuCoverImage(kitsuManga.attributes.coverImage) || getKitsuPosterImage(kitsuManga.attributes.posterImage)
-    : null
+    : posterUrl // Use poster as fallback if no cover
   
   // Get the best title - prioritize English titles
   const title = kitsuManga ? getBestKitsuTitle(kitsuManga) : "Unknown Title"
@@ -251,14 +251,15 @@ export default function MangaDetailPage() {
         coverUrl={coverUrl} 
         posterUrl={posterUrl}
         title={title} 
+        showTitle={false} // Don't show title in banner since we have it in header
       />
       
       <main className="relative z-10">
         {/* Hero Section with Poster and Quick Info */}
-        <div className="container mx-auto px-4 -mt-32 relative z-20">
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className="container mx-auto px-4 -mt-24 md:-mt-32 relative z-20">
+          <div className="flex flex-col lg:flex-row gap-6 md:gap-8 items-start">
             {/* Poster and Quick Actions */}
-            <div className="lg:w-80 flex-shrink-0">
+            <div className="w-full lg:w-80 flex-shrink-0">
               <MangaHeader
                 kitsuManga={kitsuManga}
                 mangaData={mangaData}
@@ -268,7 +269,7 @@ export default function MangaDetailPage() {
             </div>
             
             {/* Main Content */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 w-full">
               <MangaDetails
                 kitsuManga={kitsuManga}
                 chapters={chapters}
