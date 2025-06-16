@@ -70,6 +70,7 @@ export default function MangaReaderPage() {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const mangaId = params.mangaId as string
   const pageId = parseInt(params.pageId as string) || 1
@@ -258,16 +259,49 @@ export default function MangaReaderPage() {
     if (page < 1 || page > totalPages || isTransitioning) return
     
     setIsTransitioning(true)
-    setCurrentPage(page)
     
-    if (settings.soundEnabled) {
-      playFlipSound()
+    // Add 3D flip animation
+    const currentPageElement = pageRefs.current[currentPage - 1]
+    const nextPageElement = pageRefs.current[page - 1]
+    
+    if (currentPageElement) {
+      currentPageElement.style.transform = 'perspective(1000px) rotateY(-90deg)'
+      currentPageElement.style.transition = 'transform 0.3s ease-in-out'
     }
     
-    // Update URL
-    router.replace(`/reader/${mangaId}/${page}?chapter=${chapterId}`, { scroll: false })
-    
-    setTimeout(() => setIsTransitioning(false), 300)
+    setTimeout(() => {
+      setCurrentPage(page)
+      
+      if (nextPageElement) {
+        nextPageElement.style.transform = 'perspective(1000px) rotateY(90deg)'
+        nextPageElement.style.transition = 'none'
+        
+        setTimeout(() => {
+          nextPageElement.style.transform = 'perspective(1000px) rotateY(0deg)'
+          nextPageElement.style.transition = 'transform 0.3s ease-in-out'
+        }, 50)
+      }
+      
+      if (settings.soundEnabled) {
+        playFlipSound()
+      }
+      
+      // Update URL
+      router.replace(`/reader/${mangaId}/${page}?chapter=${chapterId}`, { scroll: false })
+      
+      setTimeout(() => {
+        setIsTransitioning(false)
+        // Reset transforms
+        if (currentPageElement) {
+          currentPageElement.style.transform = ''
+          currentPageElement.style.transition = ''
+        }
+        if (nextPageElement) {
+          nextPageElement.style.transform = ''
+          nextPageElement.style.transition = ''
+        }
+      }, 300)
+    }, 150)
   }
 
   const nextPage = () => {
@@ -379,22 +413,28 @@ export default function MangaReaderPage() {
             const isLoaded = pageData[index]?.loaded
 
             return (
-              <div key={index} className="flex-shrink-0">
+              <div 
+                key={index} 
+                ref={el => pageRefs.current[index] = el}
+                className="flex-shrink-0 relative"
+              >
                 {isLoaded ? (
-                  <Image
-                    src={pageUrl}
-                    alt={`Page ${index + 1}`}
-                    width={dimensions?.width || 800}
-                    height={dimensions?.height || 1200}
-                    className="object-contain"
-                    style={{ 
-                      userSelect: 'none',
-                      WebkitUserSelect: 'none',
-                      pointerEvents: 'none'
-                    }}
-                    unoptimized
-                    draggable={false}
-                  />
+                  <div className="relative overflow-hidden rounded-lg shadow-2xl">
+                    <Image
+                      src={pageUrl}
+                      alt={`Page ${index + 1}`}
+                      width={dimensions?.width || 800}
+                      height={dimensions?.height || 1200}
+                      className="object-contain transition-transform duration-300 hover:scale-105"
+                      style={{ 
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        pointerEvents: 'none'
+                      }}
+                      unoptimized
+                      draggable={false}
+                    />
+                  </div>
                 ) : (
                   <PageSkeleton 
                     width={dimensions?.width || 800} 
@@ -414,36 +454,18 @@ export default function MangaReaderPage() {
       
       return (
         <div className="flex items-center justify-center h-full">
-          <div className="flex h-full max-h-[90vh] gap-1">
+          <div className="flex h-full max-h-[90vh] gap-2 perspective-1000">
             {/* Left Page */}
-            <div className="relative flex-shrink-0" style={{ aspectRatio: '3/4' }}>
+            <div 
+              ref={el => pageRefs.current[currentPage - 1] = el}
+              className="relative flex-shrink-0 transform-gpu transition-transform duration-300 hover:scale-105" 
+              style={{ aspectRatio: '3/4' }}
+            >
               {currentPageData?.loaded ? (
-                <Image
-                  src={pages[currentPage - 1]}
-                  alt={`Page ${currentPage}`}
-                  fill
-                  className="object-contain"
-                  style={{ 
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                    pointerEvents: 'none'
-                  }}
-                  priority
-                  unoptimized
-                  draggable={false}
-                />
-              ) : (
-                <PageSkeleton width={600} height={800} />
-              )}
-            </div>
-            
-            {/* Right Page */}
-            {currentPage < totalPages && (
-              <div className="relative flex-shrink-0" style={{ aspectRatio: '3/4' }}>
-                {nextPageData?.loaded ? (
+                <div className="relative w-full h-full overflow-hidden rounded-lg shadow-2xl">
                   <Image
-                    src={pages[currentPage]}
-                    alt={`Page ${currentPage + 1}`}
+                    src={pages[currentPage - 1]}
+                    alt={`Page ${currentPage}`}
                     fill
                     className="object-contain"
                     style={{ 
@@ -455,6 +477,36 @@ export default function MangaReaderPage() {
                     unoptimized
                     draggable={false}
                   />
+                </div>
+              ) : (
+                <PageSkeleton width={600} height={800} />
+              )}
+            </div>
+            
+            {/* Right Page */}
+            {currentPage < totalPages && (
+              <div 
+                ref={el => pageRefs.current[currentPage] = el}
+                className="relative flex-shrink-0 transform-gpu transition-transform duration-300 hover:scale-105" 
+                style={{ aspectRatio: '3/4' }}
+              >
+                {nextPageData?.loaded ? (
+                  <div className="relative w-full h-full overflow-hidden rounded-lg shadow-2xl">
+                    <Image
+                      src={pages[currentPage]}
+                      alt={`Page ${currentPage + 1}`}
+                      fill
+                      className="object-contain"
+                      style={{ 
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        pointerEvents: 'none'
+                      }}
+                      priority
+                      unoptimized
+                      draggable={false}
+                    />
+                  </div>
                 ) : (
                   <PageSkeleton width={600} height={800} />
                 )}
@@ -472,23 +524,28 @@ export default function MangaReaderPage() {
     return (
       <div className="flex items-center justify-center h-full">
         {currentPageData?.loaded ? (
-          <div className="relative max-w-full max-h-full">
-            <Image
-              src={pages[currentPage - 1]}
-              alt={`Page ${currentPage}`}
-              width={dimensions?.width || 800}
-              height={dimensions?.height || 1200}
-              className="object-contain max-w-full max-h-[90vh]"
-              style={{ 
-                zoom: `${settings.zoom}%`,
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                pointerEvents: 'none'
-              }}
-              priority
-              unoptimized
-              draggable={false}
-            />
+          <div 
+            ref={el => pageRefs.current[currentPage - 1] = el}
+            className="relative max-w-full max-h-full transform-gpu transition-all duration-300 hover:scale-105"
+          >
+            <div className="relative overflow-hidden rounded-lg shadow-2xl">
+              <Image
+                src={pages[currentPage - 1]}
+                alt={`Page ${currentPage}`}
+                width={dimensions?.width || 800}
+                height={dimensions?.height || 1200}
+                className="object-contain max-w-full max-h-[90vh]"
+                style={{ 
+                  zoom: `${settings.zoom}%`,
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  pointerEvents: 'none'
+                }}
+                priority
+                unoptimized
+                draggable={false}
+              />
+            </div>
           </div>
         ) : (
           <PageSkeleton 
@@ -587,14 +644,14 @@ export default function MangaReaderPage() {
 
       {/* Top Navigation Bar */}
       {settings.showUI && (
-        <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent p-4 transition-all duration-300">
+        <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/90 to-transparent p-4 transition-all duration-300">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => router.push(`/manga/${mangaId}`)}
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 rounded-full"
               >
                 <Home className="w-5 h-5" />
               </Button>
@@ -610,12 +667,12 @@ export default function MangaReaderPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-white/20">
+              <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm">
                 {settings.readingMode.toUpperCase()}
               </Badge>
               
               {settings.autoPlay && (
-                <Badge variant="secondary" className="bg-green-600/20 text-green-400">
+                <Badge variant="secondary" className="bg-green-600/20 text-green-400 backdrop-blur-sm">
                   AUTO {settings.autoPlaySpeed}s
                 </Badge>
               )}
@@ -624,7 +681,7 @@ export default function MangaReaderPage() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleUI}
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 rounded-full"
               >
                 {settings.showUI ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </Button>
@@ -633,7 +690,7 @@ export default function MangaReaderPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowSettings(!showSettings)}
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 rounded-full"
               >
                 <Settings className="w-5 h-5" />
               </Button>
@@ -644,7 +701,7 @@ export default function MangaReaderPage() {
 
       {/* Bottom Navigation */}
       {settings.showUI && (
-        <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black/80 to-transparent p-4">
+        <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black/90 to-transparent p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button
@@ -652,7 +709,7 @@ export default function MangaReaderPage() {
                 size="icon"
                 onClick={prevChapter}
                 disabled={currentChapterIndex === 0}
-                className="text-white hover:bg-white/20 disabled:opacity-50"
+                className="text-white hover:bg-white/20 disabled:opacity-50 rounded-full"
               >
                 <SkipBack className="w-5 h-5" />
               </Button>
@@ -662,7 +719,7 @@ export default function MangaReaderPage() {
                 size="icon"
                 onClick={prevPage}
                 disabled={currentPage === 1 && currentChapterIndex === 0}
-                className="text-white hover:bg-white/20 disabled:opacity-50"
+                className="text-white hover:bg-white/20 disabled:opacity-50 rounded-full"
               >
                 <ChevronLeft className="w-5 h-5" />
               </Button>
@@ -673,7 +730,7 @@ export default function MangaReaderPage() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleAutoPlay}
-                className={`text-white hover:bg-white/20 ${settings.autoPlay ? 'bg-green-600/20' : ''}`}
+                className={`text-white hover:bg-white/20 rounded-full ${settings.autoPlay ? 'bg-green-600/20' : ''}`}
               >
                 {settings.autoPlay ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </Button>
@@ -682,9 +739,9 @@ export default function MangaReaderPage() {
                 <div className="text-sm text-gray-400">
                   {currentPage} / {totalPages}
                 </div>
-                <div className="w-32 h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-red-500 transition-all duration-300"
+                    className="h-full bg-red-500 transition-all duration-300 rounded-full"
                     style={{ width: `${(currentPage / totalPages) * 100}%` }}
                   />
                 </div>
@@ -697,7 +754,7 @@ export default function MangaReaderPage() {
                 size="icon"
                 onClick={nextPage}
                 disabled={currentPage === totalPages && currentChapterIndex === allChapters.length - 1}
-                className="text-white hover:bg-white/20 disabled:opacity-50"
+                className="text-white hover:bg-white/20 disabled:opacity-50 rounded-full"
               >
                 <ChevronRight className="w-5 h-5" />
               </Button>
@@ -707,7 +764,7 @@ export default function MangaReaderPage() {
                 size="icon"
                 onClick={nextChapter}
                 disabled={currentChapterIndex === allChapters.length - 1}
-                className="text-white hover:bg-white/20 disabled:opacity-50"
+                className="text-white hover:bg-white/20 disabled:opacity-50 rounded-full"
               >
                 <SkipForward className="w-5 h-5" />
               </Button>
@@ -718,15 +775,15 @@ export default function MangaReaderPage() {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <Card className="bg-gray-900 border-gray-700 p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <Card className="bg-gray-900/95 border-gray-700 p-6 max-w-md w-full max-h-[90vh] overflow-y-auto backdrop-blur-xl">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-white">Reader Settings</h3>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowSettings(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white rounded-full"
               >
                 <X className="w-5 h-5" />
               </Button>
@@ -910,6 +967,15 @@ export default function MangaReaderPage() {
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        .transform-gpu {
+          transform: translateZ(0);
+        }
+      `}</style>
     </div>
   )
 }

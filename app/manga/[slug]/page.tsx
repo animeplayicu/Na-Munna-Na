@@ -246,47 +246,61 @@ export default function MangaDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
-      <MangaBanner 
-        coverUrl={coverUrl} 
-        posterUrl={posterUrl}
-        title={title} 
-        showTitle={false} // Don't show title in banner since we have it in header
-      />
-      
-      <main className="relative z-10">
-        {/* Hero Section with Poster and Quick Info */}
-        <div className="container mx-auto px-4 -mt-16 md:-mt-24 lg:-mt-32 relative z-20">
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-            {/* Poster and Quick Actions */}
-            <div className="w-full lg:w-80 flex-shrink-0 flex justify-center lg:justify-start">
-              <MangaHeader
-                kitsuManga={kitsuManga}
-                mangaData={mangaData}
-                mangaSlug={mangaDxId}
-                chapters={chapters}
-              />
-            </div>
-            
-            {/* Main Content */}
-            <div className="flex-1 min-w-0 w-full">
-              <MangaDetails
-                kitsuManga={kitsuManga}
-                chapters={chapters}
-                mangaSlug={mangaDxId}
-              />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white overflow-hidden">
+      {/* Animated background particles */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse delay-2000"></div>
+        
+        {/* Floating elements */}
+        <div className="absolute top-20 left-10 w-2 h-2 bg-red-400 rounded-full animate-ping"></div>
+        <div className="absolute top-40 right-20 w-1 h-1 bg-blue-400 rounded-full animate-ping delay-1000"></div>
+        <div className="absolute bottom-32 left-1/4 w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping delay-2000"></div>
+      </div>
+
+      <div className="relative z-10">
+        <MangaBanner 
+          coverUrl={coverUrl} 
+          posterUrl={posterUrl}
+          title={title} 
+          showTitle={false} // Don't show title in banner since we have it in header
+        />
+        
+        <main className="relative z-10">
+          {/* Hero Section with Poster and Quick Info */}
+          <div className="container mx-auto px-4 -mt-16 md:-mt-24 lg:-mt-32 relative z-20">
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+              {/* Poster and Quick Actions */}
+              <div className="w-full lg:w-80 flex-shrink-0 flex justify-center lg:justify-start">
+                <MangaHeader
+                  kitsuManga={kitsuManga}
+                  mangaData={mangaData}
+                  mangaSlug={mangaDxId}
+                  chapters={chapters}
+                />
+              </div>
+              
+              {/* Main Content */}
+              <div className="flex-1 min-w-0 w-full">
+                <MangaDetails
+                  kitsuManga={kitsuManga}
+                  chapters={chapters}
+                  mangaSlug={mangaDxId}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Comments Section */}
-        <div className="container mx-auto px-4 py-16">
-          <MangaComments
-            mangaId={mangaDxId}
-            mangaTitle={title}
-          />
-        </div>
-      </main>
+          {/* Comments Section */}
+          <div className="container mx-auto px-4 py-16">
+            <MangaComments
+              mangaId={mangaDxId}
+              mangaTitle={title}
+            />
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
