@@ -18,7 +18,7 @@ export default function MangaBanner({ coverUrl, posterUrl, title, showTitle = tr
   const displayImage = coverUrl || posterUrl
 
   return (
-    <div className="relative w-full h-[50vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
+    <div className="relative w-full h-[40vh] md:h-[50vh] lg:h-[60vh] overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
         {displayImage && !imageError ? (
@@ -29,6 +29,9 @@ export default function MangaBanner({ coverUrl, posterUrl, title, showTitle = tr
             className={`object-cover object-center transition-all duration-700 ${
               imageLoaded ? 'scale-100 opacity-100' : 'scale-110 opacity-0'
             }`}
+            style={{
+              objectPosition: coverUrl ? 'center top' : 'center center'
+            }}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
             unoptimized

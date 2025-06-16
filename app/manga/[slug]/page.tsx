@@ -256,10 +256,10 @@ export default function MangaDetailPage() {
       
       <main className="relative z-10">
         {/* Hero Section with Poster and Quick Info */}
-        <div className="container mx-auto px-4 -mt-24 md:-mt-32 relative z-20">
-          <div className="flex flex-col lg:flex-row gap-6 md:gap-8 items-start">
+        <div className="container mx-auto px-4 -mt-16 md:-mt-24 lg:-mt-32 relative z-20">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
             {/* Poster and Quick Actions */}
-            <div className="w-full lg:w-80 flex-shrink-0">
+            <div className="w-full lg:w-80 flex-shrink-0 flex justify-center lg:justify-start">
               <MangaHeader
                 kitsuManga={kitsuManga}
                 mangaData={mangaData}

@@ -45,7 +45,7 @@ import GestureHandler from '@/components/reader/gesture-handler'
 import { usePagePreloader } from '@/components/reader/page-preloader'
 
 interface ReaderSettings {
-  readingMode: 'single' | 'double' | 'webtoon' | 'scroll-vertical' | 'scroll-horizontal'
+  readingMode: 'single' | 'double' | 'webtoon' | 'scroll-horizontal'
   flipDirection: 'rtl' | 'ltr'
   autoPlay: boolean
   autoPlaySpeed: number
@@ -387,7 +387,13 @@ export default function MangaReaderPage() {
                     width={dimensions?.width || 800}
                     height={dimensions?.height || 1200}
                     className="object-contain"
+                    style={{ 
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      pointerEvents: 'none'
+                    }}
                     unoptimized
+                    draggable={false}
                   />
                 ) : (
                   <PageSkeleton 
@@ -408,7 +414,7 @@ export default function MangaReaderPage() {
       
       return (
         <div className="flex items-center justify-center h-full">
-          <div className="flex h-full max-h-[90vh]">
+          <div className="flex h-full max-h-[90vh] gap-1">
             {/* Left Page */}
             <div className="relative flex-shrink-0" style={{ aspectRatio: '3/4' }}>
               {currentPageData?.loaded ? (
@@ -417,8 +423,14 @@ export default function MangaReaderPage() {
                   alt={`Page ${currentPage}`}
                   fill
                   className="object-contain"
+                  style={{ 
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    pointerEvents: 'none'
+                  }}
                   priority
                   unoptimized
+                  draggable={false}
                 />
               ) : (
                 <PageSkeleton width={600} height={800} />
@@ -434,8 +446,14 @@ export default function MangaReaderPage() {
                     alt={`Page ${currentPage + 1}`}
                     fill
                     className="object-contain"
+                    style={{ 
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      pointerEvents: 'none'
+                    }}
                     priority
                     unoptimized
+                    draggable={false}
                   />
                 ) : (
                   <PageSkeleton width={600} height={800} />
@@ -461,9 +479,15 @@ export default function MangaReaderPage() {
               width={dimensions?.width || 800}
               height={dimensions?.height || 1200}
               className="object-contain max-w-full max-h-[90vh]"
-              style={{ zoom: `${settings.zoom}%` }}
+              style={{ 
+                zoom: `${settings.zoom}%`,
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                pointerEvents: 'none'
+              }}
               priority
               unoptimized
+              draggable={false}
             />
           </div>
         ) : (
@@ -496,7 +520,7 @@ export default function MangaReaderPage() {
           break
         case 'ArrowUp':
           e.preventDefault()
-          if (settings.readingMode === 'scroll-vertical') {
+          if (settings.readingMode === 'webtoon') {
             scrollContainerRef.current?.scrollBy(0, -200)
           } else {
             prevPage()
@@ -504,7 +528,7 @@ export default function MangaReaderPage() {
           break
         case 'ArrowDown':
           e.preventDefault()
-          if (settings.readingMode === 'scroll-vertical') {
+          if (settings.readingMode === 'webtoon') {
             scrollContainerRef.current?.scrollBy(0, 200)
           } else {
             nextPage()

@@ -25,6 +25,9 @@ export default function GestureHandler({
   const isDraggingRef = useRef(false)
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
+    // Prevent default to stop image dragging
+    e.preventDefault()
+    
     const touch = e.touches[0]
     touchStartRef.current = {
       x: touch.clientX,
@@ -39,11 +42,18 @@ export default function GestureHandler({
       // Add visual feedback for long press
       if (containerRef.current) {
         containerRef.current.style.cursor = 'grabbing'
+        // Add haptic feedback if available
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50)
+        }
       }
     }, 500)
   }, [])
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
+    // Prevent default to stop scrolling and image dragging
+    e.preventDefault()
+    
     if (!touchStartRef.current) return
 
     const touch = e.touches[0]
@@ -51,7 +61,7 @@ export default function GestureHandler({
     const deltaY = Math.abs(touch.clientY - touchStartRef.current.y)
 
     // If moved significantly, cancel long press
-    if (deltaX > 10 || deltaY > 10) {
+    if (deltaX > 15 || deltaY > 15) {
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current)
         longPressTimerRef.current = null
@@ -60,6 +70,9 @@ export default function GestureHandler({
   }, [])
 
   const handleTouchEnd = useCallback((e: TouchEvent) => {
+    // Prevent default to stop any default touch behavior
+    e.preventDefault()
+    
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
@@ -78,7 +91,7 @@ export default function GestureHandler({
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
     // Tap detection
-    if (distance < 10 && deltaTime < 300 && !isDraggingRef.current) {
+    if (distance < 15 && deltaTime < 300 && !isDraggingRef.current) {
       const rect = containerRef.current?.getBoundingClientRect()
       if (!rect) return
 
@@ -88,28 +101,28 @@ export default function GestureHandler({
       const centerY = rect.height / 2
 
       // Check if tap is in center area (for UI toggle)
-      if (Math.abs(tapX - centerX) < rect.width * 0.2 && Math.abs(tapY - centerY) < rect.height * 0.2) {
+      if (Math.abs(tapX - centerX) < rect.width * 0.25 && Math.abs(tapY - centerY) < rect.height * 0.25) {
         onToggleUI()
         return
       }
 
       // Left/Right navigation based on reading direction
       if (readingDirection === 'rtl') {
-        if (tapX > rect.width * 0.6) {
+        if (tapX > rect.width * 0.65) {
           onPrevPage()
-        } else if (tapX < rect.width * 0.4) {
+        } else if (tapX < rect.width * 0.35) {
           onNextPage()
         }
       } else {
-        if (tapX > rect.width * 0.6) {
+        if (tapX > rect.width * 0.65) {
           onNextPage()
-        } else if (tapX < rect.width * 0.4) {
+        } else if (tapX < rect.width * 0.35) {
           onPrevPage()
         }
       }
     }
     // Swipe detection
-    else if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+    else if (Math.abs(deltaX) > 80 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
       if (readingDirection === 'rtl') {
         if (deltaX > 0) {
           onPrevPage()
@@ -129,7 +142,10 @@ export default function GestureHandler({
     isDraggingRef.current = false
   }, [onNextPage, onPrevPage, onToggleUI, readingDirection])
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Prevent default to stop image dragging
+    e.preventDefault()
+    
     // Ignore clicks on interactive elements
     const target = e.target as HTMLElement
     if (target.closest('button, a, input, [role="button"]')) {
@@ -143,34 +159,47 @@ export default function GestureHandler({
     const centerX = rect.width / 2
 
     // Center area for UI toggle
-    if (Math.abs(clickX - centerX) < rect.width * 0.2) {
+    if (Math.abs(clickX - centerX) < rect.width * 0.25) {
       onToggleUI()
       return
     }
 
     // Left/Right navigation
     if (readingDirection === 'rtl') {
-      if (clickX > rect.width * 0.6) {
+      if (clickX > rect.width * 0.65) {
         onPrevPage()
-      } else if (clickX < rect.width * 0.4) {
+      } else if (clickX < rect.width * 0.35) {
         onNextPage()
       }
     } else {
-      if (clickX > rect.width * 0.6) {
+      if (clickX > rect.width * 0.65) {
         onNextPage()
-      } else if (clickX < rect.width * 0.4) {
+      } else if (clickX < rect.width * 0.35) {
         onPrevPage()
       }
     }
   }, [onNextPage, onPrevPage, onToggleUI, readingDirection])
 
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    // Prevent all drag operations
+    e.preventDefault()
+    return false
+  }, [])
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    // Prevent context menu to avoid image saving options
+    e.preventDefault()
+    return false
+  }, [])
+
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: true })
-    container.addEventListener('touchmove', handleTouchMove, { passive: true })
-    container.addEventListener('touchend', handleTouchEnd, { passive: true })
+    // Add touch event listeners
+    container.addEventListener('touchstart', handleTouchStart, { passive: false })
+    container.addEventListener('touchmove', handleTouchMove, { passive: false })
+    container.addEventListener('touchend', handleTouchEnd, { passive: false })
 
     return () => {
       container.removeEventListener('touchstart', handleTouchStart)
@@ -183,8 +212,15 @@ export default function GestureHandler({
     <div
       ref={containerRef}
       className={`relative select-none ${className}`}
-      onClick={handleClick}
-      style={{ touchAction: 'manipulation' }}
+      onMouseDown={handleMouseDown}
+      onDragStart={handleDragStart}
+      onContextMenu={handleContextMenu}
+      style={{ 
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none'
+      }}
     >
       {children}
     </div>
