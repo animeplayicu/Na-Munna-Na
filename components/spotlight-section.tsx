@@ -1,12 +1,92 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight, Star, BookOpen, Calendar, Play, Sparkles, TrendingUp } from "lucide-react"
+import { ChevronLeft, ChevronRight, Star, BookOpen, Calendar, Play, Sparkles, TrendingUp, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import Image from "next/image"
-import { getMangaDxTrendingWithKitsuPosters } from "@/lib/mangadx-api"
+import LibraryStatusSelector from "@/components/library/library-status-selector"
+
+// Enhanced API integration with Jikan v4 for better data
+async function getJikanMangaDetails(malId: string) {
+  try {
+    const response = await fetch(`https://api.jikan.moe/v4/manga/${malId}`)
+    const data = await response.json()
+    return data.data
+  } catch (error) {
+    console.error('Error fetching Jikan data:', error)
+    return null
+  }
+}
+
+async function getEnhancedSpotlightData() {
+  try {
+    // Get trending manga from MangaDx
+    const mangadxResponse = await fetch('/api/proxy/mangadx/manga?limit=10&order[followedCount]=desc&includes[]=cover_art&contentRating[]=safe&contentRating[]=suggestive')
+    const mangadxData = await mangadxResponse.json()
+    
+    if (!mangadxData?.data) return []
+
+    const enhancedManga = await Promise.all(
+      mangadxData.data.slice(0, 6).map(async (manga: any) => {
+        const title = manga.attributes.title.en || Object.values(manga.attributes.title)[0] || 'Unknown Title'
+        
+        // Get cover art
+        const coverArt = manga.relationships.find((rel: any) => rel.type === 'cover_art')
+        const coverUrl = coverArt ? `https://uploads.mangadx.org/covers/${manga.id}/${coverArt.attributes?.fileName}.512.jpg` : null
+        
+        // Try to get Kitsu data for additional info
+        let kitsuData = null
+        let jikanData = null
+        
+        try {
+          const kitsuResponse = await fetch(`/api/proxy/kitsu/manga?filter[text]=${encodeURIComponent(title)}&page[limit]=1`)
+          const kitsuResult = await kitsuResponse.json()
+          kitsuData = kitsuResult.data?.[0]
+          
+          // If we have Kitsu data, try to get MAL ID for Jikan
+          if (kitsuData?.attributes?.slug) {
+            // Search for MAL ID in Kitsu's mappings or use a different approach
+            // For now, we'll use the enhanced data from what we have
+          }
+        } catch (error) {
+          console.warn('Could not fetch additional data for', title)
+        }
+
+        return {
+          id: manga.id,
+          title,
+          description: manga.attributes.description?.en || Object.values(manga.attributes.description || {})[0] || 'No description available.',
+          coverUrl: coverUrl || kitsuData?.attributes?.posterImage?.large || '/placeholder.svg',
+          bannerUrl: kitsuData?.attributes?.coverImage?.original || coverUrl || '/placeholder.svg',
+          posterUrl: kitsuData?.attributes?.posterImage?.large || '/placeholder.svg',
+          status: manga.attributes.status || 'Unknown',
+          year: manga.attributes.year || new Date().getFullYear(),
+          contentRating: manga.attributes.contentRating || 'safe',
+          chapterCount: kitsuData?.attributes?.chapterCount || '?',
+          averageRating: kitsuData?.attributes?.averageRating ? (parseFloat(kitsuData.attributes.averageRating) / 10).toFixed(1) : null,
+          genres: manga.attributes.tags
+            ?.filter((tag: any) => tag.attributes.group === 'genre')
+            ?.map((tag: any) => tag.attributes.name?.en || Object.values(tag.attributes.name)[0])
+            ?.slice(0, 4) || [],
+          mangaData: {
+            manga_id: manga.id,
+            manga_title: title,
+            manga_slug: manga.id,
+            poster_url: kitsuData?.attributes?.posterImage?.large || '/placeholder.svg',
+            total_chapters: kitsuData?.attributes?.chapterCount
+          }
+        }
+      })
+    )
+
+    return enhancedManga.filter(Boolean)
+  } catch (error) {
+    console.error('Error fetching enhanced spotlight data:', error)
+    return []
+  }
+}
 
 export default function SpotlightSection() {
   const [spotlightManga, setSpotlightManga] = useState<any[]>([])
@@ -17,8 +97,8 @@ export default function SpotlightSection() {
   useEffect(() => {
     const fetchSpotlightManga = async () => {
       try {
-        const data = await getMangaDxTrendingWithKitsuPosters(10)
-        setSpotlightManga(data || [])
+        const data = await getEnhancedSpotlightData()
+        setSpotlightManga(data)
       } catch (error) {
         console.error("Error fetching spotlight manga:", error)
       } finally {
@@ -71,40 +151,18 @@ export default function SpotlightSection() {
   }
 
   const currentManga = spotlightManga[currentIndex]
-  const title = currentManga.attributes.title.en || Object.values(currentManga.attributes.title)[0] || "Unknown Title"
-  const description = currentManga.attributes.description?.en || Object.values(currentManga.attributes.description)[0] || "No description available."
-  
-  // Enhanced image handling - use cover first, then poster as fallback
-  const coverArt = currentManga.relationships.find((rel: any) => rel.type === 'cover_art' && rel.attributes?.fileName)
-  const coverUrl = coverArt ? `https://uploads.mangadx.org/covers/${currentManga.id}/${coverArt.attributes?.fileName}.512.jpg` : null
-  const posterUrl = currentManga.kitsuPoster
-  
-  // Use cover as banner, poster as side image
-  const bannerUrl = coverUrl || posterUrl || "/placeholder.svg?height=600&width=1200"
-  const sideImageUrl = posterUrl || coverUrl || "/placeholder.svg"
-  
-  const genres: string[] = Array.isArray(currentManga.attributes.tags)
-    ? currentManga.attributes.tags
-        .filter((tag: any) => tag.attributes.group === "genre")
-        .map((tag: any) => tag?.attributes?.name?.en || Object.values(tag?.attributes?.name || {})[0] || '')
-        .filter(Boolean)
-        .slice(0, 4)
-    : [];
-  const contentRating = currentManga.attributes.contentRating
 
   return (
-    <section className="relative h-[80vh] rounded-3xl overflow-hidden group shadow-2xl shadow-red-900/50">
+    <section className="relative h-[85vh] rounded-3xl overflow-hidden group shadow-2xl shadow-red-900/50">
       {/* Enhanced Background with better scaling */}
       <div className="absolute inset-0">
         <Image
-          src={bannerUrl}
-          alt={`${title} banner`}
+          src={currentManga.bannerUrl}
+          alt={`${currentManga.title} banner`}
           fill
-          className={`object-cover transition-all duration-1000 group-hover:scale-105 ${
-            coverUrl ? 'object-center' : 'object-top'
-          }`}
+          className="object-cover transition-all duration-1000 group-hover:scale-105"
           style={{
-            objectPosition: coverUrl ? 'center center' : 'center top'
+            objectPosition: 'center center'
           }}
           unoptimized
           priority
@@ -112,6 +170,7 @@ export default function SpotlightSection() {
         {/* Enhanced gradient overlays */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/90" />
         <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 via-transparent to-purple-900/20" />
       </div>
 
@@ -130,8 +189,8 @@ export default function SpotlightSection() {
             <div className="hidden lg:block">
               <div className="relative w-72 aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 backdrop-blur-sm transform hover:scale-105 transition-all duration-500">
                 <Image 
-                  src={sideImageUrl} 
-                  alt={title} 
+                  src={currentManga.posterUrl} 
+                  alt={currentManga.title} 
                   fill 
                   className="object-cover" 
                   unoptimized 
@@ -157,11 +216,11 @@ export default function SpotlightSection() {
                     <TrendingUp className="w-4 h-4 mr-2" />
                     Spotlight
                   </Badge>
-                  {currentManga.attributes.averageRating && (
+                  {currentManga.averageRating && (
                     <div className="flex items-center gap-2 bg-yellow-500/20 border border-yellow-500/30 rounded-full px-4 py-2 backdrop-blur-sm">
                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
                       <span className="text-yellow-100 font-semibold">
-                        {Number.parseFloat(currentManga.attributes.averageRating).toFixed(1)}
+                        {currentManga.averageRating}
                       </span>
                     </div>
                   )}
@@ -169,12 +228,12 @@ export default function SpotlightSection() {
 
                 {/* Enhanced title with animation */}
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent drop-shadow-2xl animate-fade-in">
-                  {title}
+                  {currentManga.title}
                 </h1>
 
                 {/* Enhanced genre tags */}
                 <div className="flex flex-wrap gap-3">
-                  {genres.slice(0, 4).map((genre, index) => (
+                  {currentManga.genres.slice(0, 4).map((genre: string, index: number) => (
                     <Badge
                       key={genre}
                       variant="secondary"
@@ -188,7 +247,7 @@ export default function SpotlightSection() {
 
                 {/* Enhanced description */}
                 <p className="text-xl text-gray-200 leading-relaxed max-w-4xl line-clamp-3 drop-shadow-lg">
-                  {description}
+                  {currentManga.description}
                 </p>
 
                 {/* Enhanced metadata */}
@@ -196,33 +255,33 @@ export default function SpotlightSection() {
                   <div className="flex items-center gap-3 bg-black/30 rounded-full px-4 py-2 backdrop-blur-sm">
                     <BookOpen className="w-5 h-5 text-red-400" />
                     <span className="font-medium">
-                      {typeof currentManga.attributes.chapterCount === 'number' ? currentManga.attributes.chapterCount : "?"} Chapters
+                      {currentManga.chapterCount} Chapters
                     </span>
                   </div>
                   <div className="flex items-center gap-3 bg-black/30 rounded-full px-4 py-2 backdrop-blur-sm">
                     <Calendar className="w-5 h-5 text-blue-400" />
                     <span className="font-medium">
-                      {currentManga.attributes.year || "Unknown"}
+                      {currentManga.year}
                     </span>
                   </div>
                   <Badge 
                     className={`px-4 py-2 font-semibold ${
-                      currentManga.attributes.status === 'ongoing' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
-                      currentManga.attributes.status === 'completed' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' :
+                      currentManga.status === 'ongoing' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                      currentManga.status === 'completed' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' :
                       'bg-gray-500/20 text-gray-300 border-gray-500/30'
                     }`}
                   >
-                    {currentManga.attributes.status?.charAt(0).toUpperCase() + currentManga.attributes.status?.slice(1) || "Unknown"}
+                    {currentManga.status?.charAt(0).toUpperCase() + currentManga.status?.slice(1) || "Unknown"}
                   </Badge>
-                  {contentRating && (
+                  {currentManga.contentRating && (
                     <Badge 
                       className={`px-4 py-2 font-semibold ${
-                        contentRating.toLowerCase() === 'safe' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
-                        contentRating.toLowerCase() === 'suggestive' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' :
+                        currentManga.contentRating.toLowerCase() === 'safe' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                        currentManga.contentRating.toLowerCase() === 'suggestive' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' :
                         'bg-red-500/20 text-red-300 border-red-500/30'
                       }`}
                     >
-                      {contentRating.toUpperCase()}
+                      {currentManga.contentRating.toUpperCase()}
                     </Badge>
                   )}
                 </div>
@@ -236,12 +295,10 @@ export default function SpotlightSection() {
                     Read Now
                   </Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 px-8 py-4 text-lg rounded-2xl backdrop-blur-sm shadow-xl hover:shadow-white/20 transition-all duration-300 hover:scale-105"
-                >
-                  Add to Library
-                </Button>
+                <LibraryStatusSelector 
+                  mangaData={currentManga.mangaData}
+                  onStatusChange={() => {}}
+                />
               </div>
             </div>
           </div>

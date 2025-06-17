@@ -24,8 +24,16 @@ export default function Hero() {
     }
   }
 
+  const handleStartReading = () => {
+    router.push('/home')
+  }
+
+  const handleBrowseFavorites = () => {
+    router.push('/favorites')
+  }
+
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-red-900/30 via-black to-purple-900/30 min-h-[90vh] flex items-center">
+    <div className="relative overflow-hidden bg-gradient-to-br from-red-900/30 via-black to-purple-900/30 min-h-screen flex items-center">
       {/* Animated background elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-2 h-2 bg-red-400 rounded-full animate-ping"></div>
@@ -117,14 +125,14 @@ export default function Hero() {
             <p className="text-gray-400 text-lg mb-6">Join thousands of manga enthusiasts worldwide</p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button
-                onClick={() => router.push('/search')}
+                onClick={handleStartReading}
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25"
               >
                 Start Reading Now
               </Button>
               <Button
                 variant="outline"
-                onClick={() => router.push('/favorites')}
+                onClick={handleBrowseFavorites}
                 className="border-gray-600 text-gray-300 hover:border-gray-500 hover:text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105"
               >
                 Browse Favorites
